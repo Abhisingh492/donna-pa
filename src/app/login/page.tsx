@@ -42,9 +42,6 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
             Donna
           </h1>
-          <p className="text-sm text-zinc-500 font-medium">
-            Protected assistant
-          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
