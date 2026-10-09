@@ -51,8 +51,46 @@ export default function ChatPage() {
         body: JSON.stringify({ messages: updatedMessages }),
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error("Failed to get response");
+      if (response.status === 429) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content:
+              "Too many messages. Limit is 10 per minute. Please wait a moment and try again.",
+          },
+        ]);
+        return;
+      }
+
+      if (!response.ok) {
+        let errorMessage =
+          "An error occurred while generating a response. Please try again.";
+        try {
+          const data = await response.json();
+          if (data && typeof data.error === "string" && data.error.trim()) {
+            errorMessage = data.error;
+          }
+        } catch {
+          // Fallback to generic friendly message if JSON parsing fails
+        }
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: errorMessage },
+        ]);
+        return;
+      }
+
+      if (!response.body) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content:
+              "An error occurred while generating a response. Please try again.",
+          },
+        ]);
+        return;
       }
 
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -77,7 +115,14 @@ export default function ChatPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("An error occurred while generating a response. Please try again.");
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "An error occurred while generating a response. Please try again.",
+        },
+      ]);
     } finally {
       setIsLoading(false);
       setTimeout(() => {
