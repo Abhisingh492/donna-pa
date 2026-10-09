@@ -1,6 +1,6 @@
 "use client";
 
-import { useState,useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
 
 interface Message {
@@ -12,16 +12,22 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
-  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-};
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-    useEffect(() => {
+  useEffect(() => {
     scrollToBottom();
-    }, [messages]);
+  }, [messages, isLoading]);
 
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,8 +35,12 @@ export default function ChatPage() {
 
     const userMsg = input.trim();
     setInput("");
-    
-    const updatedMessages: Message[] = [...messages, { role: "user", content: userMsg }];
+    setError(null);
+
+    const updatedMessages: Message[] = [
+      ...messages,
+      { role: "user", content: userMsg },
+    ];
     setMessages(updatedMessages);
     setIsLoading(true);
 
@@ -67,67 +77,138 @@ export default function ChatPage() {
       }
     } catch (err) {
       console.error(err);
+      setError("An error occurred while generating a response. Please try again.");
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
     }
   }
 
   return (
-    <div className="flex flex-col h-screen max-w-3xl mx-auto p-4">
-      {/* <header className="py-4 border-b">
-        <h1 className="text-xl font-bold">Protected Free-LLM Chat</h1>
-      </header> */}
-      <header className="py-4 border-b flex justify-between items-center">
-        <h1 className="text-xl font-bold">Protected Free-LLM Chat</h1>
-        <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-sm bg-gray-200 hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 px-3 py-1 rounded-md transition"
-        >
-            Sign Out
-        </button>
-        </header>
-
-      <div className="flex-1 overflow-y-auto space-y-4 py-4">
-        {messages.map((m, idx) => (
-          <div
-            key={idx}
-            className={`p-3 rounded-lg ${
-              m.role === "user"
-                ? "bg-blue-600 text-white ml-auto max-w-[80%]"
-                : "bg-gray-100 text-gray-900 mr-auto max-w-[80%]"
-            }`}
-          >
-            <p className="font-semibold text-xs mb-1">
-              {m.role === "user" ? "You" : "AI"}
-            </p>
-            <p className="whitespace-pre-wrap">{m.content}</p>
+    <div className="flex flex-col h-screen h-[100dvh] w-full max-w-3xl mx-auto bg-zinc-50 border-x border-zinc-200/60 shadow-sm overflow-hidden">
+      {/* Header */}
+      <header className="shrink-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-4 py-3 sm:px-6 flex items-center justify-between z-10">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-zinc-900 text-white font-bold text-base shadow-sm">
+            D
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+          <div>
+            <h1 className="text-base font-semibold text-zinc-900 leading-tight">
+              Donna
+            </h1>
+            <p className="text-xs text-zinc-500 font-medium">
+              Protected assistant
+            </p>
+          </div>
+        </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2 pt-2 border-t">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
-          className="flex-1 p-2 border rounded-md text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isLoading}
-        />
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="bg-black text-white px-4 py-2 rounded-md hover:bg-zinc-800 disabled:opacity-50"
-        >
-          {isLoading ? "Sending..." : "Send"}
-        </button>
-        <button
-            onClick={() => setMessages([])}
-            className="text-xs text-gray-500 hover:text-red-500 underline"
+        <div className="flex items-center gap-2 sm:gap-3">
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setMessages([]);
+                setError(null);
+              }}
+              className="px-3 py-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
             >
-            Clear Chat
-        </button>
-      </form>
+              Clear
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="px-3 py-1.5 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      {/* Messages Area */}
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 space-y-4">
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 font-semibold text-xl">
+              D
+            </div>
+            <div className="space-y-1 max-w-sm">
+              <h2 className="text-lg font-semibold text-zinc-800">
+                How can I help?
+              </h2>
+              <p className="text-sm text-zinc-500">
+                Ask Donna anything. Your chat session is protected.
+              </p>
+            </div>
+          </div>
+        ) : (
+          messages.map((m, idx) => {
+            const isLastAssistant =
+              m.role === "assistant" && idx === messages.length - 1;
+            const isWaitingForFirstToken =
+              isLastAssistant && m.content === "" && isLoading;
+
+            return (
+              <div
+                key={idx}
+                className={`flex flex-col ${
+                  m.role === "user" ? "items-end" : "items-start"
+                }`}
+              >
+                <div
+                  className={`px-4 py-3 rounded-2xl max-w-[85%] sm:max-w-[75%] text-sm sm:text-base leading-relaxed shadow-xs ${
+                    m.role === "user"
+                      ? "bg-zinc-900 text-white rounded-br-xs"
+                      : "bg-white text-zinc-900 border border-zinc-200/80 rounded-bl-xs"
+                  }`}
+                >
+                  {isWaitingForFirstToken ? (
+                    <div className="flex items-center gap-1.5 py-1 px-1">
+                      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce"></span>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        {error && (
+          <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl font-medium">
+            {error}
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </main>
+
+      {/* Input Footer */}
+      <footer className="shrink-0 bg-white border-t border-zinc-200 p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            className="flex-1 h-11 px-4 bg-zinc-50 text-zinc-900 border border-zinc-300 rounded-xl placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-base sm:text-sm transition-colors"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="h-11 px-5 bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
+          >
+            {isLoading ? "Sending..." : "Send"}
+          </button>
+        </form>
+      </footer>
     </div>
   );
 }
