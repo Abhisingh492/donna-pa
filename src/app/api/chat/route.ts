@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 
@@ -48,7 +49,7 @@ Bachelor of Computer Applications (BCA) 2015 – 2018
 Tecnia Institute of Advanced Studies
 
 
-NOTE: do not make unnecessary large responses, keep the response short and concise.`
+NOTE: do not make unnecessary large responses, keep the response short and concise.`;
 
 export async function POST(req: Request) {
   try {
@@ -58,7 +59,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Parse payload
+    // 2. Check IP rate limit (10 messages per minute per IP)
+    const clientIp = getClientIp(req);
+    const { success, limit, remaining, reset } = await checkRateLimit(clientIp);
+
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Limit is 10 messages per minute." },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": remaining.toString(),
+            "X-RateLimit-Reset": reset.toString(),
+          },
+        }
+      );
+    }
+
+    // 3. Parse payload
     const { messages } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
@@ -68,7 +87,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Initiate Groq completion stream
+    // 4. Initiate Groq completion stream
     const groqStream = await groq.chat.completions.create({
       model: "openai/gpt-oss-120b", // or "llama-3.3-70b-versatile" / "mixtral-8x7b-32768"
       messages: [
@@ -78,7 +97,7 @@ export async function POST(req: Request) {
       stream: true,
     });
 
-    // 4. Create readable stream wrapper
+    // 5. Create readable stream wrapper
     const encoder = new TextEncoder();
     const customStream = new ReadableStream({
       async start(controller) {
@@ -97,7 +116,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // 5. Always return standard Response
+    // 6. Always return standard Response
     return new Response(customStream, {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
