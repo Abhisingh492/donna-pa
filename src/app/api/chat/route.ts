@@ -47,6 +47,8 @@ frontend/backend development for mobile teams.
 EDUCATION
 Bachelor of Computer Applications (BCA) 2015 – 2018
 Tecnia Institute of Advanced Studies
+CONTACT INFORMATION
+email : singh.abhishek151193@gmail.com
 
 
 NOTE: do not make unnecessary large responses, keep the response short and concise.`;

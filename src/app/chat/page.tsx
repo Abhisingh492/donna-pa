@@ -144,7 +144,7 @@ export default function ChatPage() {
               Donna
             </h1>
             <p className="text-xs text-zinc-500 font-medium">
-              Protected assistant
+              AI Portfolio Assistant
             </p>
           </div>
         </div>
@@ -181,10 +181,10 @@ export default function ChatPage() {
             </div>
             <div className="space-y-1 max-w-sm">
               <h2 className="text-lg font-semibold text-zinc-800">
-                How can I help?
+                Hi, I'm Donna! An AI Portfolio Assistant
               </h2>
               <p className="text-sm text-zinc-500">
-                Ask Donna anything. Your chat session is protected.
+                Ask Donna about Abhishek's portfolio, projects, skills, or any other relevant information.
               </p>
             </div>
           </div>
