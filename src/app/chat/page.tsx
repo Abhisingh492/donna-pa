@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   role: "user" | "assistant";
@@ -195,16 +197,18 @@ export default function ChatPage() {
             const isWaitingForFirstToken =
               isLastAssistant && m.content === "" && isLoading;
 
+            const isUser = m.role === "user";
+
             return (
               <div
                 key={idx}
                 className={`flex flex-col ${
-                  m.role === "user" ? "items-end" : "items-start"
+                  isUser ? "items-end" : "items-start"
                 }`}
               >
                 <div
                   className={`px-4 py-3 rounded-2xl max-w-[85%] sm:max-w-[75%] text-sm sm:text-base leading-relaxed shadow-xs ${
-                    m.role === "user"
+                    isUser
                       ? "bg-zinc-900 text-white rounded-br-xs"
                       : "bg-white text-zinc-900 border border-zinc-200/80 rounded-bl-xs"
                   }`}
@@ -215,8 +219,101 @@ export default function ChatPage() {
                       <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
                       <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce"></span>
                     </div>
-                  ) : (
+                  ) : isUser ? (
                     <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                  ) : (
+                    <div className="break-words">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p({ children }) {
+                            return <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>;
+                          },
+                          ul({ children }) {
+                            return <ul className="list-disc pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>;
+                          },
+                          ol({ children }) {
+                            return <ol className="list-decimal pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>;
+                          },
+                          li({ children }) {
+                            return <li className="leading-relaxed">{children}</li>;
+                          },
+                          h1({ children }) {
+                            return <h1 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h1>;
+                          },
+                          h2({ children }) {
+                            return <h2 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h2>;
+                          },
+                          h3({ children }) {
+                            return <h3 className="text-sm font-bold mb-1 mt-2 first:mt-0">{children}</h3>;
+                          },
+                          a({ href, children }) {
+                            return (
+                              <a
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline font-medium break-all"
+                              >
+                                {children}
+                              </a>
+                            );
+                          },
+                          blockquote({ children }) {
+                            return (
+                              <blockquote className="border-l-2 border-zinc-300 pl-3 my-2 text-zinc-600 italic">
+                                {children}
+                              </blockquote>
+                            );
+                          },
+                          pre({ children }) {
+                            return (
+                              <pre className="bg-zinc-900 text-zinc-100 p-3 rounded-lg my-2 overflow-x-auto text-xs sm:text-sm font-mono">
+                                {children}
+                              </pre>
+                            );
+                          },
+                          code({ className, children, node }) {
+                            const isBlock =
+                              Boolean(className) ||
+                              (node?.position &&
+                                node.position.start.line !== node.position.end.line);
+                            if (isBlock) {
+                              return <code className={className}>{children}</code>;
+                            }
+                            return (
+                              <code className="bg-zinc-100 text-zinc-800 px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono border border-zinc-200/60">
+                                {children}
+                              </code>
+                            );
+                          },
+                          table({ children }) {
+                            return (
+                              <div className="overflow-x-auto my-2">
+                                <table className="min-w-full divide-y divide-zinc-200 border border-zinc-200 text-xs sm:text-sm">
+                                  {children}
+                                </table>
+                              </div>
+                            );
+                          },
+                          th({ children }) {
+                            return (
+                              <th className="bg-zinc-100 px-2 py-1.5 text-left font-semibold text-zinc-700">
+                                {children}
+                              </th>
+                            );
+                          },
+                          td({ children }) {
+                            return <td className="px-2 py-1.5 border-t border-zinc-200">{children}</td>;
+                          },
+                          hr() {
+                            return <hr className="my-3 border-zinc-200" />;
+                          },
+                        }}
+                      >
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
                   )}
                 </div>
               </div>
