@@ -1,5 +1,6 @@
-import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials"
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { logger } from "@/lib/logger";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -9,13 +10,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        const username = typeof credentials?.username === "string" ? credentials.username : undefined;
         if (
           credentials?.username === process.env.AUTH_USERNAME &&
           credentials?.password === process.env.AUTH_PASSWORD
         ) {
-          return { id: "1", name: credentials.username as string }
+          logger.info("Auth credentials attempt succeeded", { username });
+          return { id: "1", name: username };
         }
-        return null
+        logger.warn("Auth credentials attempt failed", { username });
+        return null;
       },
     }),
   ],
@@ -23,6 +27,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    authorized: ({ auth }) => !!auth,
+    authorized: ({ auth }) => {
+      const isAuthorized = !!auth;
+      logger.info("Auth check evaluated", {
+        authorized: isAuthorized,
+        user: auth?.user?.name ?? auth?.user?.email ?? undefined,
+      });
+      return isAuthorized;
+    },
   },
-})
+});
