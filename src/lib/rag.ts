@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 
 const EMBEDDING_MODEL = "gemini-embedding-001";
 const VECTOR_DIMENSIONS = 768;
@@ -46,7 +47,9 @@ function normalizeVector(values: number[] | undefined): number[] {
     throw new Error("Gemini returned an embedding with non-finite values.");
   }
 
-  const magnitude = Math.sqrt(values.reduce((sum, value) => sum + value * value, 0));
+  const magnitude = Math.sqrt(
+    values.reduce((sum, value) => sum + value * value, 0),
+  );
   if (!Number.isFinite(magnitude) || magnitude === 0) {
     throw new Error("Gemini returned an embedding with an invalid L2 norm.");
   }
@@ -111,7 +114,9 @@ async function retrieve(
       abortSignal: signal,
     },
   });
-  const embedding = normalizeVector(embeddingResponse.embeddings?.[0]?.values);
+  const embedding = normalizeVector(
+    embeddingResponse.embeddings?.[0]?.values,
+  );
 
   const { data, error } = await supabase
     .rpc("match_knowledge_chunks", {
@@ -133,17 +138,6 @@ async function retrieve(
     return emptyResult();
   }
 
-  if (process.env.RAG_DEBUG === "true") {
-    for (const chunk of chunks) {
-      console.info("RAG retrieved chunk:", {
-        query: redactSecrets(query),
-        source: chunk.source,
-        section: chunk.section,
-        similarity: chunk.similarity,
-      });
-    }
-  }
-
   return {
     context: chunks
       .map(
@@ -159,34 +153,82 @@ async function retrieve(
   };
 }
 
-export async function retrieveContext(query: string): Promise<RetrievalResult> {
+export async function retrieveContext(
+  query: string,
+  options?: { requestId?: string },
+): Promise<RetrievalResult> {
+  const requestId = options?.requestId;
   const trimmedQuery = query.trim().slice(0, QUERY_MAX_LENGTH);
+
   if (trimmedQuery.length === 0) {
+    logger.info(
+      "RAG retrieval skipped for empty query",
+      { queryLength: query.length },
+      requestId,
+    );
     return emptyResult();
   }
 
+  const startTime = performance.now();
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
 
   try {
-    return await Promise.race([
+    const result = await Promise.race([
       retrieve(trimmedQuery, controller.signal),
       new Promise<RetrievalResult>((resolve) => {
         timeout = setTimeout(() => {
           controller.abort();
-          console.error("RAG retrieval timed out after 5 seconds.");
+          logger.error(
+            "RAG retrieval timed out after 5 seconds.",
+            { queryLength: trimmedQuery.length, timeoutMs: RETRIEVAL_TIMEOUT_MS },
+            requestId,
+          );
           resolve(emptyResult());
         }, RETRIEVAL_TIMEOUT_MS);
       }),
     ]);
+
+    const durationMs = Math.round(performance.now() - startTime);
+
+    logger.info(
+      "RAG retrieval completed",
+      {
+        durationMs,
+        chunksCount: result.chunks.length,
+        contextLength: result.context.length,
+        isEmptyContext: result.context.length === 0,
+      },
+      requestId,
+    );
+
+    logger.advanced(
+      "info",
+      "RAG retrieval details",
+      {
+        query: trimmedQuery,
+        durationMs,
+        chunksCount: result.chunks.length,
+        contextLength: result.context.length,
+        chunks: result.chunks,
+      },
+      requestId,
+    );
+
+    return result;
   } catch (error: unknown) {
-    console.error(
-      "RAG retrieval failed:",
-      redactSecrets(
-        error instanceof Error
-          ? `${error.name}: ${error.message}`.slice(0, 200)
-          : "Unknown error",
-      ),
+    const durationMs = Math.round(performance.now() - startTime);
+    logger.error(
+      "RAG retrieval failed",
+      {
+        durationMs,
+        error: redactSecrets(
+          error instanceof Error
+            ? `${error.name}: ${error.message}`.slice(0, 200)
+            : "Unknown error",
+        ),
+      },
+      requestId,
     );
     return emptyResult();
   } finally {

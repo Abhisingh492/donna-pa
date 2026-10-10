@@ -7,6 +7,7 @@
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { logger } from "@/lib/logger";
 
 const url = process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -25,10 +26,15 @@ if (url && token) {
   });
 }
 
-export async function checkRateLimit(identifier: string) {
+export async function checkRateLimit(
+  identifier: string,
+  options?: { requestId?: string },
+) {
   if (!ratelimit) {
-    console.warn(
-      "Upstash Redis rate limiting is skipped: UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN environment variables are missing."
+    logger.warn(
+      "Upstash Redis rate limiting is skipped: UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN environment variables are missing.",
+      { identifier },
+      options?.requestId,
     );
     return {
       success: true,
@@ -39,9 +45,25 @@ export async function checkRateLimit(identifier: string) {
   }
 
   try {
-    return await ratelimit.limit(identifier);
+    const result = await ratelimit.limit(identifier);
+    logger.info(
+      "Rate limit check completed",
+      {
+        identifier,
+        success: result.success,
+        limit: result.limit,
+        remaining: result.remaining,
+        reset: result.reset,
+      },
+      options?.requestId,
+    );
+    return result;
   } catch (error) {
-    console.error("Error evaluating rate limit with Upstash Redis:", error);
+    logger.error(
+      "Error evaluating rate limit with Upstash Redis",
+      error,
+      options?.requestId,
+    );
     // Fail open gracefully if Redis service encounters an error
     return {
       success: true,
