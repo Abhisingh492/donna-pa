@@ -9,7 +9,7 @@ import dynamic from "next/dynamic";
 const Avatar = dynamic(() => import("@/components/Avatar"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[200px] bg-zinc-900 rounded-2xl flex items-center justify-center p-4">
+    <div className="w-full h-full min-h-[220px] bg-zinc-900 rounded-2xl flex items-center justify-center p-4">
       <div className="flex flex-col items-center gap-2">
         <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-200 rounded-full animate-spin" />
         <span className="text-xs text-zinc-400 font-medium">Initializing 3D Avatar...</span>
@@ -28,6 +28,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAvatarMode, setIsAvatarMode] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,7 +43,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+  }, [isAvatarMode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,7 +64,10 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages }),
+        body: JSON.stringify({
+          messages: updatedMessages,
+          mode: isAvatarMode ? "avatar" : "donna",
+        }),
       });
 
       if (response.status === 429) {
@@ -151,15 +155,30 @@ export default function ChatPage() {
       {/* Header */}
       <header className="shrink-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-4 py-3 sm:px-6 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-zinc-900 text-white font-bold text-base shadow-sm">
-            D
+          <div
+            className={`flex items-center justify-center w-9 h-9 rounded-xl font-bold text-base shadow-sm transition-colors ${
+              isAvatarMode
+                ? "bg-indigo-600 text-white"
+                : "bg-zinc-900 text-white"
+            }`}
+          >
+            {isAvatarMode ? "A" : "D"}
           </div>
           <div>
-            <h1 className="text-base font-semibold text-zinc-900 leading-tight">
-              Donna
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold text-zinc-900 leading-tight">
+                {isAvatarMode ? "Abhishek Singh" : "Donna"}
+              </h1>
+              {isAvatarMode && (
+                <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
+                  3D Avatar Mode
+                </span>
+              )}
+            </div>
             <p className="text-xs text-zinc-500 font-medium">
-              AI Portfolio Assistant
+              {isAvatarMode
+                ? "Interactive 3D Male Avatar (RAG Knowledge Base)"
+                : "AI Portfolio Assistant"}
             </p>
           </div>
         </div>
@@ -177,6 +196,27 @@ export default function ChatPage() {
               Clear
             </button>
           )}
+
+          {/* Abhishek Avatar Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsAvatarMode((prev) => !prev)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              isAvatarMode
+                ? "bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100"
+                : "bg-zinc-900 text-white hover:bg-zinc-800 shadow-xs"
+            }`}
+          >
+            {isAvatarMode ? (
+              <span>← Back to Donna</span>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Abhishek Avatar</span>
+              </>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -189,40 +229,59 @@ export default function ChatPage() {
 
       {/* Main Content Body */}
       <div className="flex-1 flex flex-col sm:flex-row overflow-hidden min-h-0">
-        {/* Left Side Panel - 3D Avatar (Compact top card on mobile, ~320px left panel on desktop) */}
-        <aside className="shrink-0 w-full sm:w-80 md:w-[340px] border-b sm:border-b-0 sm:border-r border-zinc-200 bg-zinc-100/50 p-3 sm:p-4 flex flex-col justify-between gap-3 overflow-y-auto">
-          <div className="h-48 sm:h-auto sm:flex-1 w-full min-h-[190px] relative flex flex-col">
-            <Avatar className="w-full h-full flex-1" />
-          </div>
-          <div className="hidden sm:block bg-white p-3 rounded-xl border border-zinc-200/80 text-xs text-zinc-600 space-y-1 shrink-0 shadow-2xs">
-            <div className="flex items-center justify-between font-semibold text-zinc-800">
-              <span>Abhishek's 3D Avatar</span>
-              <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live
-              </span>
+        {/* If in Avatar Mode, display 3D Avatar Panel */}
+        {isAvatarMode && (
+          <aside className="shrink-0 w-full sm:w-80 md:w-[360px] border-b sm:border-b-0 sm:border-r border-zinc-200 bg-zinc-900/95 p-3 sm:p-4 flex flex-col justify-between gap-3 overflow-y-auto">
+            <div className="h-56 sm:h-auto sm:flex-1 w-full min-h-[220px] relative flex flex-col">
+              <Avatar className="w-full h-full flex-1" />
             </div>
-            <p className="text-zinc-500 text-[11px] leading-relaxed">
-              3D interactive presence powered by TalkingHead.js. Ready for lip-sync integration.
-            </p>
-          </div>
-        </aside>
+            <div className="bg-zinc-800/80 p-3 rounded-xl border border-zinc-700/60 text-xs text-zinc-300 space-y-1.5 shrink-0 shadow-2xs">
+              <div className="flex items-center justify-between font-semibold text-white">
+                <span>Abhishek&apos;s 3D Avatar</span>
+                <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/50">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live
+                </span>
+              </div>
+              <p className="text-zinc-400 text-[11px] leading-relaxed">
+                Interacting as Abhishek Singh. Powered by TalkingHead.js and the exact same portfolio RAG context.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsAvatarMode(false)}
+                className="mt-1 w-full text-center text-xs py-1 px-2 bg-zinc-700/60 hover:bg-zinc-700 text-zinc-200 rounded-md transition-colors"
+              >
+                Exit Avatar Mode
+              </button>
+            </div>
+          </aside>
+        )}
 
-        {/* Right Side Panel - Existing Chat UI */}
+        {/* Chat Messages Section */}
         <section className="flex-1 flex flex-col min-w-0 min-h-0 bg-zinc-50">
           {/* Messages Area */}
           <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 space-y-4">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 font-semibold text-xl">
-                  D
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-semibold text-xl transition-colors ${
+                    isAvatarMode
+                      ? "bg-indigo-100 text-indigo-700"
+                      : "bg-zinc-100 text-zinc-400"
+                  }`}
+                >
+                  {isAvatarMode ? "A" : "D"}
                 </div>
                 <div className="space-y-1 max-w-sm">
                   <h2 className="text-lg font-semibold text-zinc-800">
-                    Hi, I'm Donna! An AI Portfolio Assistant
+                    {isAvatarMode
+                      ? "Chat with Abhishek's 3D Avatar"
+                      : "Hi, I'm Donna! An AI Portfolio Assistant"}
                   </h2>
                   <p className="text-sm text-zinc-500">
-                    Ask Donna about Abhishek's portfolio, projects, skills, or any other relevant information.
+                    {isAvatarMode
+                      ? "Ask Abhishek directly about his projects, technical skills, work experience, or background."
+                      : "Ask Donna about Abhishek's portfolio, projects, skills, or any other relevant information."}
                   </p>
                 </div>
               </div>
@@ -374,7 +433,11 @@ export default function ChatPage() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
+                placeholder={
+                  isAvatarMode
+                    ? "Ask Abhishek a question..."
+                    : "Type your message..."
+                }
                 className="flex-1 h-11 px-4 bg-zinc-50 text-zinc-900 border border-zinc-300 rounded-xl placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-base sm:text-sm transition-colors"
                 disabled={isLoading}
               />
