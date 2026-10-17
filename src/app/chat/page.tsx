@@ -4,6 +4,19 @@ import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import dynamic from "next/dynamic";
+
+const Avatar = dynamic(() => import("@/components/Avatar"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full min-h-[200px] bg-zinc-900 rounded-2xl flex items-center justify-center p-4">
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-200 rounded-full animate-spin" />
+        <span className="text-xs text-zinc-400 font-medium">Initializing 3D Avatar...</span>
+      </div>
+    </div>
+  ),
+});
 
 interface Message {
   role: "user" | "assistant";
@@ -134,7 +147,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen h-[100dvh] w-full max-w-3xl mx-auto bg-zinc-50 border-x border-zinc-200/60 shadow-sm overflow-hidden">
+    <div className="flex flex-col h-screen h-[100dvh] w-full max-w-6xl mx-auto bg-zinc-50 border-x border-zinc-200/60 shadow-sm overflow-hidden">
       {/* Header */}
       <header className="shrink-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-4 py-3 sm:px-6 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
@@ -174,183 +187,208 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* Messages Area */}
-      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 space-y-4">
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 font-semibold text-xl">
-              D
-            </div>
-            <div className="space-y-1 max-w-sm">
-              <h2 className="text-lg font-semibold text-zinc-800">
-                Hi, I'm Donna! An AI Portfolio Assistant
-              </h2>
-              <p className="text-sm text-zinc-500">
-                Ask Donna about Abhishek's portfolio, projects, skills, or any other relevant information.
-              </p>
-            </div>
+      {/* Main Content Body */}
+      <div className="flex-1 flex flex-col sm:flex-row overflow-hidden min-h-0">
+        {/* Left Side Panel - 3D Avatar (Compact top card on mobile, ~320px left panel on desktop) */}
+        <aside className="shrink-0 w-full sm:w-80 md:w-[340px] border-b sm:border-b-0 sm:border-r border-zinc-200 bg-zinc-100/50 p-3 sm:p-4 flex flex-col justify-between gap-3 overflow-y-auto">
+          <div className="h-48 sm:h-auto sm:flex-1 w-full min-h-[190px] relative flex flex-col">
+            <Avatar className="w-full h-full flex-1" />
           </div>
-        ) : (
-          messages.map((m, idx) => {
-            const isLastAssistant =
-              m.role === "assistant" && idx === messages.length - 1;
-            const isWaitingForFirstToken =
-              isLastAssistant && m.content === "" && isLoading;
+          <div className="hidden sm:block bg-white p-3 rounded-xl border border-zinc-200/80 text-xs text-zinc-600 space-y-1 shrink-0 shadow-2xs">
+            <div className="flex items-center justify-between font-semibold text-zinc-800">
+              <span>Abhishek's 3D Avatar</span>
+              <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live
+              </span>
+            </div>
+            <p className="text-zinc-500 text-[11px] leading-relaxed">
+              3D interactive presence powered by TalkingHead.js. Ready for lip-sync integration.
+            </p>
+          </div>
+        </aside>
 
-            const isUser = m.role === "user";
-
-            return (
-              <div
-                key={idx}
-                className={`flex flex-col ${
-                  isUser ? "items-end" : "items-start"
-                }`}
-              >
-                <div
-                  className={`px-4 py-3 rounded-2xl max-w-[85%] sm:max-w-[75%] text-sm sm:text-base leading-relaxed shadow-xs ${
-                    isUser
-                      ? "bg-zinc-900 text-white rounded-br-xs"
-                      : "bg-white text-zinc-900 border border-zinc-200/80 rounded-bl-xs"
-                  }`}
-                >
-                  {isWaitingForFirstToken ? (
-                    <div className="flex items-center gap-1.5 py-1 px-1">
-                      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce"></span>
-                    </div>
-                  ) : isUser ? (
-                    <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                  ) : (
-                    <div className="break-words">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          p({ children }) {
-                            return <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>;
-                          },
-                          ul({ children }) {
-                            return <ul className="list-disc pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>;
-                          },
-                          ol({ children }) {
-                            return <ol className="list-decimal pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>;
-                          },
-                          li({ children }) {
-                            return <li className="leading-relaxed">{children}</li>;
-                          },
-                          h1({ children }) {
-                            return <h1 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h1>;
-                          },
-                          h2({ children }) {
-                            return <h2 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h2>;
-                          },
-                          h3({ children }) {
-                            return <h3 className="text-sm font-bold mb-1 mt-2 first:mt-0">{children}</h3>;
-                          },
-                          a({ href, children }) {
-                            return (
-                              <a
-                                href={href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline font-medium break-all"
-                              >
-                                {children}
-                              </a>
-                            );
-                          },
-                          blockquote({ children }) {
-                            return (
-                              <blockquote className="border-l-2 border-zinc-300 pl-3 my-2 text-zinc-600 italic">
-                                {children}
-                              </blockquote>
-                            );
-                          },
-                          pre({ children }) {
-                            return (
-                              <pre className="bg-zinc-900 text-zinc-100 p-3 rounded-lg my-2 overflow-x-auto text-xs sm:text-sm font-mono">
-                                {children}
-                              </pre>
-                            );
-                          },
-                          code({ className, children, node }) {
-                            const isBlock =
-                              Boolean(className) ||
-                              (node?.position &&
-                                node.position.start.line !== node.position.end.line);
-                            if (isBlock) {
-                              return <code className={className}>{children}</code>;
-                            }
-                            return (
-                              <code className="bg-zinc-100 text-zinc-800 px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono border border-zinc-200/60">
-                                {children}
-                              </code>
-                            );
-                          },
-                          table({ children }) {
-                            return (
-                              <div className="overflow-x-auto my-2">
-                                <table className="min-w-full divide-y divide-zinc-200 border border-zinc-200 text-xs sm:text-sm">
-                                  {children}
-                                </table>
-                              </div>
-                            );
-                          },
-                          th({ children }) {
-                            return (
-                              <th className="bg-zinc-100 px-2 py-1.5 text-left font-semibold text-zinc-700">
-                                {children}
-                              </th>
-                            );
-                          },
-                          td({ children }) {
-                            return <td className="px-2 py-1.5 border-t border-zinc-200">{children}</td>;
-                          },
-                          hr() {
-                            return <hr className="my-3 border-zinc-200" />;
-                          },
-                        }}
-                      >
-                        {m.content}
-                      </ReactMarkdown>
-                    </div>
-                  )}
+        {/* Right Side Panel - Existing Chat UI */}
+        <section className="flex-1 flex flex-col min-w-0 min-h-0 bg-zinc-50">
+          {/* Messages Area */}
+          <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 space-y-4">
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 font-semibold text-xl">
+                  D
+                </div>
+                <div className="space-y-1 max-w-sm">
+                  <h2 className="text-lg font-semibold text-zinc-800">
+                    Hi, I'm Donna! An AI Portfolio Assistant
+                  </h2>
+                  <p className="text-sm text-zinc-500">
+                    Ask Donna about Abhishek's portfolio, projects, skills, or any other relevant information.
+                  </p>
                 </div>
               </div>
-            );
-          })
-        )}
+            ) : (
+              messages.map((m, idx) => {
+                const isLastAssistant =
+                  m.role === "assistant" && idx === messages.length - 1;
+                const isWaitingForFirstToken =
+                  isLastAssistant && m.content === "" && isLoading;
 
-        {error && (
-          <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl font-medium">
-            {error}
-          </div>
-        )}
+                const isUser = m.role === "user";
 
-        <div ref={messagesEndRef} />
-      </main>
+                return (
+                  <div
+                    key={idx}
+                    className={`flex flex-col ${
+                      isUser ? "items-end" : "items-start"
+                    }`}
+                  >
+                    <div
+                      className={`px-4 py-3 rounded-2xl max-w-[85%] sm:max-w-[75%] text-sm sm:text-base leading-relaxed shadow-xs ${
+                        isUser
+                          ? "bg-zinc-900 text-white rounded-br-xs"
+                          : "bg-white text-zinc-900 border border-zinc-200/80 rounded-bl-xs"
+                      }`}
+                    >
+                      {isWaitingForFirstToken ? (
+                        <div className="flex items-center gap-1.5 py-1 px-1">
+                          <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                          <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                          <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce"></span>
+                        </div>
+                      ) : isUser ? (
+                        <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                      ) : (
+                        <div className="break-words">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              p({ children }) {
+                                return <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>;
+                              },
+                              ul({ children }) {
+                                return <ul className="list-disc pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>;
+                              },
+                              ol({ children }) {
+                                return <ol className="list-decimal pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>;
+                              },
+                              li({ children }) {
+                                return <li className="leading-relaxed">{children}</li>;
+                              },
+                              h1({ children }) {
+                                return <h1 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h1>;
+                              },
+                              h2({ children }) {
+                                return <h2 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h2>;
+                              },
+                              h3({ children }) {
+                                return <h3 className="text-sm font-bold mb-1 mt-2 first:mt-0">{children}</h3>;
+                              },
+                              a({ href, children }) {
+                                return (
+                                  <a
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline font-medium break-all"
+                                  >
+                                    {children}
+                                  </a>
+                                );
+                              },
+                              blockquote({ children }) {
+                                return (
+                                  <blockquote className="border-l-2 border-zinc-300 pl-3 my-2 text-zinc-600 italic">
+                                    {children}
+                                  </blockquote>
+                                );
+                              },
+                              pre({ children }) {
+                                return (
+                                  <pre className="bg-zinc-900 text-zinc-100 p-3 rounded-lg my-2 overflow-x-auto text-xs sm:text-sm font-mono">
+                                    {children}
+                                  </pre>
+                                );
+                              },
+                              code({ className, children, node }) {
+                                const isBlock =
+                                  Boolean(className) ||
+                                  (node?.position &&
+                                    node.position.start.line !== node.position.end.line);
+                                if (isBlock) {
+                                  return <code className={className}>{children}</code>;
+                                }
+                                return (
+                                  <code className="bg-zinc-100 text-zinc-800 px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono border border-zinc-200/60">
+                                    {children}
+                                  </code>
+                                );
+                              },
+                              table({ children }) {
+                                return (
+                                  <div className="overflow-x-auto my-2">
+                                    <table className="min-w-full divide-y divide-zinc-200 border border-zinc-200 text-xs sm:text-sm">
+                                      {children}
+                                    </table>
+                                  </div>
+                                );
+                              },
+                              th({ children }) {
+                                return (
+                                  <th className="bg-zinc-100 px-2 py-1.5 text-left font-semibold text-zinc-700">
+                                    {children}
+                                  </th>
+                                );
+                              },
+                              td({ children }) {
+                                return <td className="px-2 py-1.5 border-t border-zinc-200">{children}</td>;
+                              },
+                              hr() {
+                                return <hr className="my-3 border-zinc-200" />;
+                              },
+                            }}
+                          >
+                            {m.content}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
 
-      {/* Input Footer */}
-      <footer className="shrink-0 bg-white border-t border-zinc-200 p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            className="flex-1 h-11 px-4 bg-zinc-50 text-zinc-900 border border-zinc-300 rounded-xl placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-base sm:text-sm transition-colors"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="h-11 px-5 bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
-          >
-            {isLoading ? "Sending..." : "Send"}
-          </button>
-        </form>
-      </footer>
+            {error && (
+              <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl font-medium">
+                {error}
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </main>
+
+          {/* Input Footer */}
+          <footer className="shrink-0 bg-white border-t border-zinc-200 p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 h-11 px-4 bg-zinc-50 text-zinc-900 border border-zinc-300 rounded-xl placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-base sm:text-sm transition-colors"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="h-11 px-5 bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
+              >
+                {isLoading ? "Sending..." : "Send"}
+              </button>
+            </form>
+          </footer>
+        </section>
+      </div>
     </div>
   );
 }
