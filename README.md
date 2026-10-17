@@ -1,5 +1,18 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 3D Avatar (POC 3)
+
+This project renders a 3D male avatar using TalkingHead.js.
+
+### How to Swap or Customize the 3D Avatar GLB
+To replace the default placeholder avatar with your own GLB model:
+1. Obtain or export a GLB avatar model containing standard ARKit blend shapes or Oculus Visemes.
+2. Place your GLB file in the `/public/avatars/` directory (e.g., `/public/avatars/me.glb`) or host it on a public CDN/HTTPS server.
+3. Open `src/components/Avatar.tsx` and update the `DEFAULT_AVATAR_URL` constant:
+   ```typescript
+   export const DEFAULT_AVATAR_URL = "/avatars/me.glb"; // Or your remote GLB URL
+   ```
+
 ## Getting Started
 
 First, run the development server:
