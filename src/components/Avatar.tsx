@@ -3,14 +3,33 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * CONFIGURABLE AVATAR URL:
- * To customize or replace the 3D male avatar model:
- * 1. Host your GLB file publicly (or place it in /public/avatars/me.glb)
- * 2. Ensure the GLB model includes standard ARKit blend shapes or Oculus Visemes
- * 3. Update the DEFAULT_AVATAR_URL constant below with your custom URL path/address.
+ * ABHISHEK'S AVATAR MODEL CONFIGURATION:
+ * This URL points to Abhishek's 3D avatar GLB model.
+ *
+ * TO REPLACE WITH A CUSTOM GLB MODEL:
+ * 1. Place your `.glb` avatar file in the `/public` directory (e.g. `/public/avatars/abhishek.glb`).
+ * 2. Ensure your GLB model contains standard ARKit blend shapes or Oculus Visemes for facial movement.
+ * 3. Update the ABHISHEK_AVATAR_URL constant below to point to your model (e.g. "/avatars/abhishek.glb" or a custom public URL).
  */
-export const DEFAULT_AVATAR_URL =
+export const ABHISHEK_AVATAR_URL =
   "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@main/avatars/avatarsdk.glb";
+
+// Backward compatibility alias
+export const DEFAULT_AVATAR_URL = ABHISHEK_AVATAR_URL;
+
+interface TalkingHeadInstance {
+  showAvatar: (
+    opt: {
+      url: string;
+      body: string;
+      avatarMood?: string;
+      baseline?: Record<string, number>;
+    },
+    onProgress?: (ev: ProgressEvent) => void
+  ) => Promise<void>;
+  stop?: () => void;
+  destroy?: () => void;
+}
 
 // Helper to inject the required three.js importmap script into <head>
 function ensureImportMap() {
@@ -40,11 +59,11 @@ interface AvatarProps {
 }
 
 export default function Avatar({
-  avatarUrl = DEFAULT_AVATAR_URL,
+  avatarUrl = ABHISHEK_AVATAR_URL,
   className = "",
 }: AvatarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const headInstanceRef = useRef<any>(null);
+  const headInstanceRef = useRef<TalkingHeadInstance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,8 +82,14 @@ export default function Avatar({
         // Dynamically import TalkingHead module from CDN
         const moduleUrl =
           "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@main/modules/talkinghead.mjs";
-        // @ts-ignore
-        const { TalkingHead } = await import(/* webpackIgnore: true */ moduleUrl);
+        const { TalkingHead } = (await import(
+          /* webpackIgnore: true */ moduleUrl
+        )) as {
+          TalkingHead: new (
+            container: HTMLElement,
+            opt: Record<string, unknown>
+          ) => TalkingHeadInstance;
+        };
 
         if (!isMounted || !containerRef.current) return;
 
@@ -96,31 +121,28 @@ export default function Avatar({
 
         headInstanceRef.current = head;
 
-        // Load avatar GLB
-        await head.showAvatar(
-          {
-            url: avatarUrl,
-            body: "M",
-            avatarMood: "neutral",
-            baseline: {
-              headRotateX: -0.04,
-              eyeBlinkLeft: 0.05,
-              eyeBlinkRight: 0.05,
-            },
+        // Load Abhishek's male avatar GLB
+        await head.showAvatar({
+          url: avatarUrl,
+          body: "M",
+          avatarMood: "neutral",
+          baseline: {
+            headRotateX: -0.04,
+            eyeBlinkLeft: 0.05,
+            eyeBlinkRight: 0.05,
           },
-          (ev: ProgressEvent) => {
-            // Optional progress tracking
-          }
-        );
+        });
 
         if (isMounted) {
           setLoading(false);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to initialize TalkingHead avatar:", err);
         if (isMounted) {
           setError(
-            err?.message || "Failed to load avatar. Please check your connection."
+            err instanceof Error
+              ? err.message
+              : "Failed to load avatar. Please check your connection."
           );
           setLoading(false);
         }
@@ -161,7 +183,7 @@ export default function Avatar({
         <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 p-4 z-10 text-center">
           <div className="w-8 h-8 border-2 border-zinc-600 border-t-white rounded-full animate-spin" />
           <p className="text-xs font-medium text-zinc-300">
-            Loading 3D Avatar...
+            Loading Abhishek&apos;s 3D Avatar...
           </p>
         </div>
       )}
